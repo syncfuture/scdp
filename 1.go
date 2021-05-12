@@ -10,9 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/chromedp/chromedp"
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/fetch"
+	c "github.com/chromedp/chromedp"
 	"github.com/syncfuture/go/serr"
 	log "github.com/syncfuture/go/slog"
+	"github.com/syncfuture/go/u"
 	"golang.org/x/net/context"
 )
 
@@ -84,10 +87,10 @@ func createDebugingContext(debuggerURL string) *TabContext {
 	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*30)
 	cancels = append([]context.CancelFunc{cancel1}, cancels...)
 
-	allocCtx, cancel2 := chromedp.NewRemoteAllocator(timeoutCtx, debuggerURL)
+	allocCtx, cancel2 := c.NewRemoteAllocator(timeoutCtx, debuggerURL)
 	cancels = append([]context.CancelFunc{cancel2}, cancels...)
 
-	taskCtx, cancel3 := chromedp.NewContext(allocCtx)
+	taskCtx, cancel3 := c.NewContext(allocCtx)
 	cancels = append([]context.CancelFunc{cancel3}, cancels...)
 
 	return &TabContext{
@@ -96,14 +99,51 @@ func createDebugingContext(debuggerURL string) *TabContext {
 	}
 }
 
-func DisableImage() chromedp.ExecAllocatorOption {
-	return chromedp.Flag("blink-settings", "imagesEnabled=false")
+func DisableImage() c.ExecAllocatorOption {
+	return c.Flag("blink-settings", "imagesEnabled=false")
 }
 
-func InPrivate() chromedp.ExecAllocatorOption {
-	return chromedp.Flag("inprivate", true)
+func InPrivate() c.ExecAllocatorOption {
+	return c.Flag("inprivate", true)
 }
 
-func Incognito() chromedp.ExecAllocatorOption {
-	return chromedp.Flag("incognito", true)
+func Incognito() c.ExecAllocatorOption {
+	return c.Flag("incognito", true)
+}
+
+func ProxyAuth(ctx context.Context, username, password string) {
+	c.ListenTarget(ctx, func(ev interface{}) {
+		go func() {
+			switch ev := ev.(type) {
+			case *fetch.EventAuthRequired:
+				c := c.FromContext(ctx)
+				execCtx := cdp.WithExecutor(ctx, c.Target)
+
+				resp := &fetch.AuthChallengeResponse{
+					Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+					Username: username,
+					Password: password,
+				}
+
+				err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
+				u.LogError(err)
+
+			case *fetch.EventRequestPaused:
+				c := c.FromContext(ctx)
+				execCtx := cdp.WithExecutor(ctx, c.Target)
+				err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
+				if err != nil {
+					log.Debug(err)
+				}
+			}
+		}()
+	})
+}
+
+func BuildActions(proxyNeedAuth bool, actions ...c.Action) []c.Action {
+	if proxyNeedAuth {
+		actions = append([]c.Action{fetch.Enable().WithHandleAuthRequests(true)}, actions...)
+	}
+
+	return actions
 }
