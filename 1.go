@@ -139,11 +139,3 @@ func ProxyAuth(ctx context.Context, username, password string) {
 		}()
 	})
 }
-
-func BuildActions(proxyNeedAuth bool, actions ...c.Action) []c.Action {
-	if proxyNeedAuth {
-		actions = append([]c.Action{fetch.Enable().WithHandleAuthRequests(true)}, actions...)
-	}
-
-	return actions
-}

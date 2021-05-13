@@ -6,6 +6,10 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+const (
+	Ctx_ProxyNeedAuth = "ProxyNeedAuth"
+)
+
 var (
 	DefaultFlags = []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
