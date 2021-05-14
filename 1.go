@@ -11,8 +11,9 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
-	c "github.com/chromedp/chromedp"
+	cd "github.com/chromedp/chromedp"
 	"github.com/syncfuture/go/serr"
 	log "github.com/syncfuture/go/slog"
 	"github.com/syncfuture/go/u"
@@ -87,10 +88,10 @@ func createDebugingContext(debuggerURL string) *TabContext {
 	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*30)
 	cancels = append([]context.CancelFunc{cancel1}, cancels...)
 
-	allocCtx, cancel2 := c.NewRemoteAllocator(timeoutCtx, debuggerURL)
+	allocCtx, cancel2 := cd.NewRemoteAllocator(timeoutCtx, debuggerURL)
 	cancels = append([]context.CancelFunc{cancel2}, cancels...)
 
-	taskCtx, cancel3 := c.NewContext(allocCtx)
+	taskCtx, cancel3 := cd.NewContext(allocCtx)
 	cancels = append([]context.CancelFunc{cancel3}, cancels...)
 
 	return &TabContext{
@@ -99,24 +100,24 @@ func createDebugingContext(debuggerURL string) *TabContext {
 	}
 }
 
-func DisableImage() c.ExecAllocatorOption {
-	return c.Flag("blink-settings", "imagesEnabled=false")
+func DisableImage() cd.ExecAllocatorOption {
+	return cd.Flag("blink-settings", "imagesEnabled=false")
 }
 
-func InPrivate() c.ExecAllocatorOption {
-	return c.Flag("inprivate", true)
+func InPrivate() cd.ExecAllocatorOption {
+	return cd.Flag("inprivate", true)
 }
 
-func Incognito() c.ExecAllocatorOption {
-	return c.Flag("incognito", true)
+func Incognito() cd.ExecAllocatorOption {
+	return cd.Flag("incognito", true)
 }
 
 func ProxyAuth(ctx context.Context, username, password string) {
-	c.ListenTarget(ctx, func(ev interface{}) {
+	cd.ListenTarget(ctx, func(ev interface{}) {
 		go func() {
 			switch ev := ev.(type) {
 			case *fetch.EventAuthRequired:
-				c := c.FromContext(ctx)
+				c := cd.FromContext(ctx)
 				execCtx := cdp.WithExecutor(ctx, c.Target)
 
 				resp := &fetch.AuthChallengeResponse{
@@ -129,7 +130,7 @@ func ProxyAuth(ctx context.Context, username, password string) {
 				u.LogError(err)
 
 			case *fetch.EventRequestPaused:
-				c := c.FromContext(ctx)
+				c := cd.FromContext(ctx)
 				execCtx := cdp.WithExecutor(ctx, c.Target)
 				err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
 				if err != nil {
@@ -138,4 +139,8 @@ func ProxyAuth(ctx context.Context, username, password string) {
 			}
 		}()
 	})
+}
+
+func ViewPort(width int64, height int64, deviceScaleFactor float64, mobile bool) cd.Action {
+	return emulation.SetDeviceMetricsOverride(width, height, deviceScaleFactor, mobile)
 }
