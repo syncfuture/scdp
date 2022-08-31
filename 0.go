@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	Ctx_ProxyNeedAuth = "ProxyNeedAuth"
+	CTX_ProxyNeedAuth = "ProxyNeedAuth"
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 	}
 )
 
-type TabContext struct {
+type Tab struct {
 	Context context.Context
 	Cancels []context.CancelFunc
 }

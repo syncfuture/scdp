@@ -15,7 +15,7 @@ import (
 	"github.com/chromedp/cdproto/fetch"
 	cd "github.com/chromedp/chromedp"
 	"github.com/syncfuture/go/serr"
-	log "github.com/syncfuture/go/slog"
+	"github.com/syncfuture/go/slog"
 	"github.com/syncfuture/go/u"
 	"golang.org/x/net/context"
 )
@@ -28,20 +28,20 @@ func isPortOpen(port int) bool {
 	return true
 }
 
-func createDebugingBrowser(exePath string, debugPort int, args ...string) (error, string) {
+func LaunchDebugingBrowser(exePath string, debugPort int, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	portOpen := isPortOpen(debugPort)
 
 	if !portOpen {
-		log.Info("Starting chrome...")
+		slog.Info("Starting chrome...")
 
 		args = append([]string{fmt.Sprintf("--remote-debugging-port=%d", debugPort)}, args...)
 		cmd := exec.Command(exePath, args...)
 		err := cmd.Start()
 		if err != nil {
-			return err, ""
+			return "", serr.WithStack(err)
 		}
 
 		portOpen = isPortOpen(debugPort)
@@ -51,7 +51,7 @@ func createDebugingBrowser(exePath string, debugPort int, args ...string) (error
 			// 超时退出
 			select {
 			case <-ctx.Done():
-				return serr.New("start browser timeout"), ""
+				return "", serr.New("start browser timeout")
 			default:
 				break
 			}
@@ -60,29 +60,29 @@ func createDebugingBrowser(exePath string, debugPort int, args ...string) (error
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/json/version", debugPort))
 	if err != nil {
-		return err, ""
+		return "", serr.WithStack(err)
 	}
 	defer resp.Body.Close()
 	configJson, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err, ""
+		return "", serr.WithStack(err)
 	}
 
 	config := make(map[string]string)
 	err = json.Unmarshal(configJson, &config)
 	if err != nil {
-		return err, ""
+		return "", serr.WithStack(err)
 	}
 
 	webSocketDebuggerURL := config["webSocketDebuggerUrl"]
 	if webSocketDebuggerURL == "" {
-		log.Fatal("get webSocketDebuggerUrl failed")
+		slog.Fatal("get webSocketDebuggerUrl failed")
 	}
-	log.Debug("debug url: ", webSocketDebuggerURL)
-	return nil, webSocketDebuggerURL
+	slog.Debug("debug url: ", webSocketDebuggerURL)
+	return webSocketDebuggerURL, nil
 }
 
-func createDebugingContext(debuggerURL string) *TabContext {
+func CreateDebugingTab(debuggerURL string) *Tab {
 	cancels := make([]context.CancelFunc, 0, 3)
 	ctx := context.Background()
 	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*30)
@@ -94,7 +94,7 @@ func createDebugingContext(debuggerURL string) *TabContext {
 	taskCtx, cancel3 := cd.NewContext(allocCtx)
 	cancels = append([]context.CancelFunc{cancel3}, cancels...)
 
-	return &TabContext{
+	return &Tab{
 		Context: taskCtx,
 		Cancels: cancels,
 	}
@@ -134,7 +134,7 @@ func ProxyAuth(ctx context.Context, username, password string) {
 				execCtx := cdp.WithExecutor(ctx, c.Target)
 				err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
 				if err != nil {
-					log.Debug(err)
+					slog.Debug(err)
 				}
 			}
 		}()
