@@ -64,6 +64,22 @@ func Test_runSupersonicQuiz(t *testing.T) {
 	slog.Info("Done")
 }
 
+func Test_runThisOrThat(t *testing.T) {
+	debuggerURL, err := LaunchDebugingBrowser(CHOMRE_PATH, 9222)
+	assert.NoError(t, err)
+	tab := CreateDebugingTab(debuggerURL)
+
+	// get the list of the targets
+	infos, err := chromedp.Targets(tab.Context)
+	u.LogFatal(err)
+
+	tabCtx, _ := chromedp.NewContext(tab.Context, chromedp.WithTargetID(infos[0].TargetID))
+
+	runThisOrThat(tabCtx)
+
+	slog.Info("Done")
+}
+
 func runTestYourSmart(tabCtx context.Context, max int) (err error) {
 	for i := 0; i < max; i++ {
 		selQ := fmt.Sprintf("#QuestionPane%d", i)
@@ -108,6 +124,40 @@ func runSupersonicQuiz(tabCtx context.Context) (err error) {
 			chromedp.WaitReady(".btOptions .btcc:not(.btsel)", chromedp.AtLeast(1)),
 		)
 		u.LogFatal(err)
+	}
+
+	return
+}
+
+func runThisOrThat(tabCtx context.Context) (err error) {
+	const selOptionLeft string = "#rqAnswerOption0"
+	const selOptionRight string = "#rqAnswerOption1"
+
+	for {
+		index := srand.IntRange(0, 1)
+
+		var selCLick string
+		if index == 0 {
+			selCLick = selOptionLeft
+		} else {
+			selCLick = selOptionRight
+		}
+
+		_, err = chromedp.RunResponse(tabCtx,
+			chromedp.WaitVisible(selOptionLeft),
+			chromedp.WaitVisible(selOptionRight),
+			chromedp.Click(selCLick),
+		)
+		u.LogFatal(err)
+
+		var nodes []*cdp.Node
+		chromedp.Run(tabCtx,
+			chromedp.Nodes("#quizCompleteContainer", &nodes, chromedp.AtLeast(0)),
+		)
+
+		if len(nodes) > 0 {
+			break
+		}
 	}
 
 	return
