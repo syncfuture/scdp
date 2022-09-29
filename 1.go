@@ -82,10 +82,11 @@ func LaunchDebugingBrowser(exePath string, debugPort int, args ...string) (strin
 	return webSocketDebuggerURL, nil
 }
 
+// Create a tab trough opened debugger url chrome instance
 func CreateDebugingTab(debuggerURL string) *Tab {
 	cancels := make([]context.CancelFunc, 0, 3)
 	ctx := context.Background()
-	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*30)
+	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*60)
 	cancels = append([]context.CancelFunc{cancel1}, cancels...)
 
 	allocCtx, cancel2 := cd.NewRemoteAllocator(timeoutCtx, debuggerURL)
