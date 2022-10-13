@@ -13,6 +13,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
+	"github.com/chromedp/chromedp"
 	cd "github.com/chromedp/chromedp"
 	"github.com/syncfuture/go/serr"
 	"github.com/syncfuture/go/slog"
@@ -144,4 +145,23 @@ func ProxyAuth(ctx context.Context, username, password string) {
 
 func ViewPort(width int64, height int64, deviceScaleFactor float64, mobile bool) cd.Action {
 	return emulation.SetDeviceMetricsOverride(width, height, deviceScaleFactor, mobile)
+}
+
+func CreateDebugingContext(browserExePath string, port int) (context.Context, error) {
+	debuggerURL, err := LaunchDebugingBrowser(browserExePath, port)
+	if err != nil {
+		return nil, serr.WithStack(err)
+	}
+
+	tab := CreateDebugingTab(debuggerURL)
+
+	// get the list of the targets
+	infos, err := chromedp.Targets(tab.Context)
+	if err != nil {
+		return nil, serr.WithStack(err)
+	}
+
+	tabCtx, _ := chromedp.NewContext(tab.Context, chromedp.WithTargetID(infos[0].TargetID))
+
+	return tabCtx, nil
 }
