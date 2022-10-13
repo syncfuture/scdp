@@ -13,7 +13,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-const CHOMRE_PATH string = `C:\Users\Lukiya\AppData\Local\Google\Chrome\Application\chrome.exe`
+const CHOMRE_PATH = `C:\Users\Lukiya\AppData\Local\Google\Chrome\Application\chrome.exe`
+const DEBUG_PORT = 9222
 
 func Test1(t *testing.T) {
 	options := append(DefaultFlags,
@@ -32,16 +33,7 @@ func Test1(t *testing.T) {
 }
 
 func Test_runTestYourSmart(t *testing.T) {
-	debuggerURL, err := LaunchDebugingBrowser(CHOMRE_PATH, 9222)
-	assert.NoError(t, err)
-	tab := CreateDebugingTab(debuggerURL)
-
-	// get the list of the targets
-	infos, err := chromedp.Targets(tab.Context)
-	u.LogFatal(err)
-
-	tabCtx, cancel := chromedp.NewContext(tab.Context, chromedp.WithTargetID(infos[0].TargetID))
-	defer cancel()
+	tabCtx, _ := CreateDebugingContext(CHOMRE_PATH, DEBUG_PORT)
 
 	runTestYourSmart(tabCtx, 10)
 
@@ -49,15 +41,7 @@ func Test_runTestYourSmart(t *testing.T) {
 }
 
 func Test_runSupersonicQuiz(t *testing.T) {
-	debuggerURL, err := LaunchDebugingBrowser(CHOMRE_PATH, 9222)
-	assert.NoError(t, err)
-	tab := CreateDebugingTab(debuggerURL)
-
-	// get the list of the targets
-	infos, err := chromedp.Targets(tab.Context)
-	u.LogFatal(err)
-
-	tabCtx, _ := chromedp.NewContext(tab.Context, chromedp.WithTargetID(infos[0].TargetID))
+	tabCtx, _ := CreateDebugingContext(CHOMRE_PATH, DEBUG_PORT)
 
 	runSupersonicQuiz(tabCtx)
 
@@ -65,15 +49,7 @@ func Test_runSupersonicQuiz(t *testing.T) {
 }
 
 func Test_runThisOrThat(t *testing.T) {
-	debuggerURL, err := LaunchDebugingBrowser(CHOMRE_PATH, 9222)
-	assert.NoError(t, err)
-	tab := CreateDebugingTab(debuggerURL)
-
-	// get the list of the targets
-	infos, err := chromedp.Targets(tab.Context)
-	u.LogFatal(err)
-
-	tabCtx, _ := chromedp.NewContext(tab.Context, chromedp.WithTargetID(infos[0].TargetID))
+	tabCtx, _ := CreateDebugingContext(CHOMRE_PATH, DEBUG_PORT)
 
 	runThisOrThat(tabCtx)
 

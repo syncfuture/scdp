@@ -84,7 +84,7 @@ func LaunchDebugingBrowser(exePath string, debugPort int, args ...string) (strin
 }
 
 // Create a tab trough opened debugger url chrome instance
-func CreateDebugingTab(debuggerURL string) *Tab {
+func createDebugingTab(debuggerURL string) *Tab {
 	cancels := make([]context.CancelFunc, 0, 3)
 	ctx := context.Background()
 	timeoutCtx, cancel1 := context.WithTimeout(ctx, time.Second*60)
@@ -153,7 +153,7 @@ func CreateDebugingContext(browserExePath string, port int) (context.Context, er
 		return nil, serr.WithStack(err)
 	}
 
-	tab := CreateDebugingTab(debuggerURL)
+	tab := createDebugingTab(debuggerURL)
 
 	// get the list of the targets
 	infos, err := chromedp.Targets(tab.Context)
